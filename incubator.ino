@@ -10,6 +10,10 @@
 #define green 6
 #define yellow 5
 #define waterheat 2
+
+#define sec 300     // период считывания данных с датчика для их последующего усреднения
+#define n     // кол-во значений для усреднения
+
 #define DHTPIN 7    // what digital pin we're connected to
 #include <LiquidCrystal.h>
 int backlight=3;
@@ -31,37 +35,7 @@ LiquidCrystal lcd(4, 6, 10, 11, 12, 13);
 // tweak the timings for faster processors.  This parameter is no longer needed
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
-
-void setup() {
-  Serial.begin(9600);
-  dht.begin();
-  pinMode(red, OUTPUT);
-  pinMode(green, OUTPUT);
-  pinMode(yellow, OUTPUT);
-  pinMode(backlight, OUTPUT);
-  pinMode(waterheat,OUTPUT);
-  digitalWrite(backlight, HIGH);
-  lcd.begin(16, 2);
-  lcd.print("Hello word!");
-  delay(5000);
-  lcd.clear();
-}
-
-void loop() {
-  // Wait a few seconds between measurements.
-  delay(2000);
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float t = dht.readTemperature();
-
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t)) {
-    Serial.println(F("Failed to read from DHT sensor!"));
-    return;
-  }
+void output(int h; int t){      // вывод данных на экран
   lcd.setCursor(0, 0);
   lcd.print(F("Hum: "));
   lcd.print(h);
@@ -80,6 +54,56 @@ void loop() {
   Serial.print(t);
   Serial.println(" C");
   Serial.println(" ");
+}
+void openhatch(){      // открытие крышки, продолжительность и закрытие
+
+  repeat
+    delay(2000);
+    float h = dht.readHumidity();
+    output();
+  until(
+}
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+  pinMode(red, OUTPUT);
+  pinMode(green, OUTPUT);
+  pinMode(yellow, OUTPUT);
+  pinMode(backlight, OUTPUT);
+  pinMode(waterheat,OUTPUT);
+  digitalWrite(backlight, HIGH);
+  lcd.begin(16, 2);
+  lcd.print("Hello word!");
+  delay(5000);
+  lcd.clear();
+}
+
+void loop() {
+
+  int mid.h := 0;
+  int mid.t := 0;
+  for (i:=0; i < n; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
+    // Wait a few seconds between measurements.
+    delay(2000);
+    // Reading temperature or humidity takes about 250 milliseconds!
+    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    float h = dht.readHumidity();
+    // Read temperature as Celsius (the default)
+    float t = dht.readTemperature();
+    mid.h += h;
+    mid.t += t;
+    output(h; t);
+    delay(sec * 1000);
+  }
+  mid.h /= n;
+  mid.t /= n;
+  
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    return;
+  }
 
   if (abs(h - 65) >= 15){
     digitalWrite(waterheat, HIGH);
