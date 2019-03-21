@@ -6,17 +6,19 @@
 // - Adafruit Unified Sensor Library: https://github.com/adafruit/Adafruit_Senso
 
 #include "DHT.h"
-#define red 3
-#define green 6
-#define yellow 5
-#define waterheat 2
+#define light 2
 
 #define sec 300     // период считывания данных с датчика для их последующего усреднения
-#define n     // кол-во значений для усреднения
+#define n 5    // кол-во значений для усреднения
+
+#define lampON 21
+#define hatchCLOSE 22
+#define hatchOPEN 23
+#define hatchCLOSElampON 24
 
 #define DHTPIN 7    // what digital pin we're connected to
 #include <LiquidCrystal.h>
-int backlight=3;
+int backlight=3, todo;
 LiquidCrystal lcd(4, 6, 10, 11, 12, 13);
 // Uncomment whatever type you're using!
 #define DHTTYPE DHT22   // DHT 11
@@ -35,7 +37,7 @@ LiquidCrystal lcd(4, 6, 10, 11, 12, 13);
 // tweak the timings for faster processors.  This parameter is no longer needed
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
-void output(int h; int t){      // вывод данных на экран
+void output(int h, int t){      // вывод данных на экран
   lcd.setCursor(0, 0);
   lcd.print(F("Hum: "));
   lcd.print(h);
@@ -55,24 +57,48 @@ void output(int h; int t){      // вывод данных на экран
   Serial.println(" C");
   Serial.println(" ");
 }
-void openhatch(){      // открытие крышки, продолжительность и закрытие
 
-  repeat
-    delay(2000);
-    float h = dht.readHumidity();
-    output();
-  until(
+void openhatch(){      // открытие крышки, продолжительность и закрытие
+  //открвыаем люк
+}
+
+void lamp(){
+  digitalWrite(light, HIGH);
+  int midh, midt;
+  for (int i = 0; i < 5; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
+      delay(2000);
+      float h = dht.readHumidity();
+      float t = dht.readTemperature();
+      midh += h;
+      midt += t;
+      delay(5000);
+    }
+  midh /= 5;
+  midt /= 5;
+  while(midt > 27 or midh > 75){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
+      delay(2000);
+      float h = dht.readHumidity();
+      float t = dht.readTemperature();
+      midh += h;
+      midt += t;
+  }
+  digitalWrite(light, LOW);
+}
+
+void allsbad(){
+  // закрываем люк
+  lamp();
+  //открываем люк
+}
+
+void closehatch(){
+  //закрываем люк
 }
 
 void setup() {
   Serial.begin(9600);
   dht.begin();
-  pinMode(red, OUTPUT);
-  pinMode(green, OUTPUT);
-  pinMode(yellow, OUTPUT);
-  pinMode(backlight, OUTPUT);
-  pinMode(waterheat,OUTPUT);
-  digitalWrite(backlight, HIGH);
+  pinMode(light,OUTPUT);
   lcd.begin(16, 2);
   lcd.print("Hello word!");
   delay(5000);
@@ -81,9 +107,9 @@ void setup() {
 
 void loop() {
 
-  int mid.h := 0;
-  int mid.t := 0;
-  for (i:=0; i < n; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
+  int midh = 0;
+  int midt = 0;
+  for (int i = 0; i < n; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
     // Wait a few seconds between measurements.
     delay(2000);
     // Reading temperature or humidity takes about 250 milliseconds!
@@ -91,24 +117,64 @@ void loop() {
     float h = dht.readHumidity();
     // Read temperature as Celsius (the default)
     float t = dht.readTemperature();
-    mid.h += h;
-    mid.t += t;
-    output(h; t);
+    midh += h;
+    midt += t;
+    output(h, t);
     delay(sec * 1000);
   }
-  mid.h /= n;
-  mid.t /= n;
+  midh /= n;
+  midt /= n;
   
   // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t)) {
-    Serial.println(F("Failed to read from DHT sensor!"));
-    return;
-  }
+  //if (isnan(h) || isnan(t)) {
+    //Serial.println(F("Failed to read from DHT sensor!"));
+    //return;
+  //}
 
-  if (abs(h - 65) >= 15){
-    digitalWrite(waterheat, HIGH);
+  if (midt < 22){
+    if (midh > 60) todo = lampON;
+    else todo = hatchCLOSElampON;
   }
-  else {
-    digitalWrite(waterheat, LOW);
+  if (midt > 27) todo = hatchOPEN;
+
+  switch (todo) {
+       case lampON:
+            lamp();
+            break;
+
+       case hatchCLOSElampON:
+            allsbad();
+            break;
+
+       case hatchOPEN:
+            openhatch();
+            break;
   }
+  
+  if (midh < 60){
+    if (midh < 50) todo = hatchCLOSElampON;
+    else{
+      if (midt < 22) todo = lampON;
+      else todo = hatchCLOSE;
+    }
   }
+  if (midh > 75) todo = hatchOPEN;
+
+  switch (todo) {
+       case lampON:
+            lamp();
+            break;
+
+       case hatchCLOSElampON:
+            allsbad();
+            break;
+
+       case hatchOPEN:
+            openhatch();
+            break;
+
+       case hatchCLOSE:
+            closehatch();
+            break;
+  }
+}
