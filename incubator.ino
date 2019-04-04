@@ -8,8 +8,11 @@
 #include "DHT.h"
 #define light 2
 
-#define sec 300     // период считывания данных с датчика для их последующего усреднения
+#define sec 1        // период считывания данных с датчика для их последующего усреднения в секундах
 #define n 5    // кол-во значений для усреднения
+
+#include <Servo.h>
+Servo servo;
 
 #define lampON 21
 #define hatchCLOSE 22
@@ -59,11 +62,18 @@ void output(int h, int t){      // вывод данных на экран
 }
 
 void openhatch(){      // открытие крышки, продолжительность и закрытие
-  //открвыаем люк
+  servo.write(0);
+  delay(2000);
+  servo.write(180);
+  delay(2000);
 }
 
 void lamp(){
   digitalWrite(light, HIGH);
+  servo.write(0);
+  delay(2000);
+  servo.write(180);
+  delay(2000);
   int midh, midt;
   for (int i = 0; i < 5; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
       delay(2000);
@@ -86,13 +96,20 @@ void lamp(){
 }
 
 void allsbad(){
-  // закрываем люк
+  servo.write(0);
+  delay(2000);
+  servo.write(180);
+  delay(2000);
   lamp();
   //открываем люк
 }
 
 void closehatch(){
   //закрываем люк
+  servo.write(0);
+  delay(2000);
+  servo.write(180);
+  delay(2000);
 }
 
 void setup() {
@@ -103,6 +120,9 @@ void setup() {
   lcd.print("Hello word!");
   delay(5000);
   lcd.clear();
+  int midh = 0;
+  int midt = 0;
+  servo.attach(9);
 }
 
 void loop() {
@@ -124,7 +144,6 @@ void loop() {
   }
   midh /= n;
   midt /= n;
-  
   // Check if any reads failed and exit early (to try again).
   //if (isnan(h) || isnan(t)) {
     //Serial.println(F("Failed to read from DHT sensor!"));
@@ -139,14 +158,17 @@ void loop() {
 
   switch (todo) {
        case lampON:
+            Serial.println("lamp on");
             lamp();
             break;
 
        case hatchCLOSElampON:
+            Serial.println("ALL'SBAD!!!");
             allsbad();
             break;
 
        case hatchOPEN:
+            Serial.println("hatch open");
             openhatch();
             break;
   }
@@ -162,18 +184,22 @@ void loop() {
 
   switch (todo) {
        case lampON:
+            Serial.println("lamp on");
             lamp();
             break;
 
        case hatchCLOSElampON:
+            Serial.println("ALL'SBAD!!!");
             allsbad();
             break;
 
        case hatchOPEN:
+            Serial.print("hatch open");
             openhatch();
             break;
 
        case hatchCLOSE:
+            Serial.println("hatch close");
             closehatch();
             break;
   }
