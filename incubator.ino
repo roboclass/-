@@ -1,27 +1,25 @@
-// Example testing sketch for various DHT humidity/temperature sensors
-// Written by ladyada, public domain
-
-// REQUIRES the following Arduino libraries:
-// - DHT Sensor Library: https://github.com/adafruit/DHT-sensor-library
-// - Adafruit Unified Sensor Library: https://github.com/adafruit/Adafruit_Senso
-
 #include "DHT.h"
 #define light 2
 
-#define sec 1        // период считывания данных с датчика для их последующего усреднения в секундах
+#define min 0.2        // период считывания данных с датчика для их последующего усреднения в минутах
 #define n 5    // кол-во значений для усреднения
 
 #include <Servo.h>
 Servo servo;
+int norm 90       //нормальное значение высоты люка (угол)
 
 #define lampON 21
 #define hatchCLOSE 22
 #define hatchOPEN 23
 #define hatchCLOSElampON 24
 
+int openings;       //кол-во открытий крышки
+int closings;       //кол-во закрытий крышки, ф-ция allsbad считается за два
+int count;          //кол-во выполнения loop
+
 #define DHTPIN 7    // what digital pin we're connected to
 #include <LiquidCrystal.h>
-int backlight=3, todo;
+int backlight = 3, todo;
 LiquidCrystal lcd(4, 6, 10, 11, 12, 13);
 // Uncomment whatever type you're using!
 #define DHTTYPE DHT22   // DHT 11
@@ -61,55 +59,79 @@ void output(int h, int t){      // вывод данных на экран
   Serial.println(" ");
 }
 
-void openhatch(){      // открытие крышки, продолжительность и закрытие
-  servo.write(0);
-  delay(2000);
-  servo.write(180);
-  delay(2000);
+void openhatch(){
+  servo.write(180);       //открываем люк на максимум
+  float midh, midt;
+  int i;
+  for (i = 0; i < 5; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
+      float h = dht.readHumidity();
+      float t = dht.readTemperature();
+      midh += h;
+      midt += t;
+      delay(1000);
+    }
+  output(midh/5, midt/5);
+  while(midt/i > 22; midh/i > 55){                        //пока данные выйдут за границу нормы, продолжаем
+      delay(2000);
+      float h = dht.readHumidity();
+      float t = dht.readTemperature();
+      midh += h;
+      midt += t;
+      i ++;
+  }
+  servo.write(norm);      //возвращаем люк в норму
 }
 
 void lamp(){
   digitalWrite(light, HIGH);
-  servo.write(0);
-  delay(2000);
-  servo.write(180);
-  delay(2000);
-  int midh, midt;
-  for (int i = 0; i < 5; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
-      delay(2000);
+  float midh, midt;
+  int i;
+  for (i = 0; i < 5; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
       float h = dht.readHumidity();
       float t = dht.readTemperature();
       midh += h;
       midt += t;
-      delay(5000);
+      delay(1000);
     }
-  midh /= 5;
-  midt /= 5;
-  while(midt > 27 or midh > 75){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
+  output(midh/5, midt/5);
+  while(midt/i < 30 or midh/i < 75){                        //пока данные выйдут за границу нормы, продолжаем
       delay(2000);
       float h = dht.readHumidity();
       float t = dht.readTemperature();
       midh += h;
       midt += t;
+      i ++;
   }
   digitalWrite(light, LOW);
 }
 
 void allsbad(){
-  servo.write(0);
-  delay(2000);
-  servo.write(180);
-  delay(2000);
+  servo.write(0);     //закрываем люк
   lamp();
-  //открываем люк
+  servo.write(norm);    //возвращаем люк в норму
 }
 
 void closehatch(){
-  //закрываем люк
-  servo.write(0);
-  delay(2000);
-  servo.write(180);
-  delay(2000);
+  servo.write(0);       //закрываем люк
+  float midh, midt;
+  int i;
+  for (i = 0; i < 5; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
+      float h = dht.readHumidity();
+      float t = dht.readTemperature();
+      midh += h;
+      midt += t;
+      delay(1000);
+    }
+  output(midh/5, midt/5);
+  while(midh/i < 75){                        //пока данные выйдут за границу нормы, продолжаем
+      delay(2000);
+      float h = dht.readHumidity();
+      float t = dht.readTemperature();
+      midh += h;
+      midt += t;
+      i ++;
+  }
+  servo.write(norm);      //возвращаем люк в норму
 }
 
 void setup() {
@@ -120,18 +142,20 @@ void setup() {
   lcd.print("Hello word!");
   delay(5000);
   lcd.clear();
-  int midh = 0;
-  int midt = 0;
   servo.attach(9);
 }
 
 void loop() {
+  int k = 15;
+  if(count = k){
+    if(closings - openings > 2 and norm <= 175) norm += 5;
+    if(openings - closings > 2 and norm >= 5) norm -= 5;
+  }
 
-  int midh = 0;
-  int midt = 0;
-  for (int i = 0; i < n; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
-    // Wait a few seconds between measurements.
-    delay(2000);
+  delay(min * 60000);
+  
+  float midh = 0, midt = 0;
+  for (int i = 0; i < 12; i ++){                        //считываем 12 значений на протяжении 3 минут (каждую четверть минуты)и находим среднее, чтобы сгладить разброс
     // Reading temperature or humidity takes about 250 milliseconds!
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
     float h = dht.readHumidity();
@@ -140,21 +164,25 @@ void loop() {
     midh += h;
     midt += t;
     output(h, t);
-    delay(sec * 1000);
+    delay(250);
   }
   midh /= n;
   midt /= n;
+  
   // Check if any reads failed and exit early (to try again).
   //if (isnan(h) || isnan(t)) {
     //Serial.println(F("Failed to read from DHT sensor!"));
     //return;
   //}
-
+  
+  k = 5;
+  
   if (midt < 22){
     if (midh > 60) todo = lampON;
     else todo = hatchCLOSElampON;
   }
   if (midt > 27) todo = hatchOPEN;
+
 
   switch (todo) {
        case lampON:
@@ -172,6 +200,7 @@ void loop() {
             openhatch();
             break;
   }
+
   
   if (midh < 60){
     if (midh < 50) todo = hatchCLOSElampON;
@@ -181,6 +210,7 @@ void loop() {
     }
   }
   if (midh > 75) todo = hatchOPEN;
+
 
   switch (todo) {
        case lampON:
