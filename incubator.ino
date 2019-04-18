@@ -1,12 +1,12 @@
 #include "DHT.h"
 #define light 2
 
-#define min 0.2        // период считывания данных с датчика для их последующего усреднения в минутах
+int min=0.1;         // период считывания данных с датчика для их последующего усреднения в минутах
 #define n 5    // кол-во значений для усреднения
 
 #include <Servo.h>
 Servo servo;
-int norm 90       //нормальное значение высоты люка (угол)
+int norm=45;       //нормальное значение высоты люка (угол)
 
 #define lampON 21
 #define hatchCLOSE 22
@@ -59,8 +59,8 @@ void output(int h, int t){      // вывод данных на экран
   Serial.println(" ");
 }
 
-void openhatch(){
-  servo.write(180);       //открываем люк на максимум
+void openhatch(){      // открытие крышки, продолжительность и закрытие
+  servo.write(90);       //открываем люк на максимум
   float midh, midt;
   int i;
   for (i = 0; i < 5; i ++){                        //считываем несколько значений и находим среднее, чтобы сгладить разброс
@@ -71,7 +71,7 @@ void openhatch(){
       delay(1000);
     }
   output(midh/5, midt/5);
-  while(midt/i > 22; midh/i > 55){                        //пока данные выйдут за границу нормы, продолжаем
+  while(midt/i > 22 and midh/i > 55){                        //пока данные выйдут за границу нормы, продолжаем
       delay(2000);
       float h = dht.readHumidity();
       float t = dht.readTemperature();
@@ -83,6 +83,7 @@ void openhatch(){
 }
 
 void lamp(){
+  
   digitalWrite(light, HIGH);
   float midh, midt;
   int i;
@@ -139,13 +140,16 @@ void setup() {
   dht.begin();
   pinMode(light,OUTPUT);
   lcd.begin(16, 2);
-  lcd.print("Hello word!");
+  lcd.print("Hello world!");
   delay(5000);
   lcd.clear();
+  int midh = 0;
+  int midt = 0;
   servo.attach(9);
 }
 
 void loop() {
+
   int k = 15;
   if(count = k){
     if(closings - openings > 2 and norm <= 175) norm += 5;
